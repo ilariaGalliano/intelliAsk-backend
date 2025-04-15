@@ -3,14 +3,24 @@ const axios = require('axios');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const app = express();
 require('dotenv').config();
 
 app.use(cors());
+app.use(helmet());
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Troppo traffico da questo IP, riprova più tardi."
+});
+app.use('/ask', limiter);
+
 app.use(express.static('public'));
 app.use(express.json());
 
-const HUGGING_FACE_API_KEY = process.env.HUGGING_FACE_API_KEY; // Replace with your actual token
 const PORT = 5000;
 const BASE_URL = 'http://localhost:' + PORT;
 const PROD_URL = 'https://intelliask.netlify.app';
