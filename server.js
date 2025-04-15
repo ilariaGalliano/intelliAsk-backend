@@ -96,7 +96,7 @@ app.post('/ask', async (req, res) => {
     res.json({ answer, slug });
   } catch (error) {
     console.error("Errore Gemini:", error.response?.data || error.message);
-    res.status(500).json({ error: 'Errore da Gemini API' });
+    res.status(500).json({ error: 'Errore da Gemini API', details: error.message });
   }
 });
 
@@ -159,7 +159,6 @@ app.get('/question/:slug', async (req, res) => {
     res.status(500).send("Errore nella generazione della risposta.");
   }
 });
-
 
 app.get('/sitemap.xml', (req, res) => {
   const questions = getAllQuestions();
