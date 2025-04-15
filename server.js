@@ -9,7 +9,18 @@ const app = express();
 require('dotenv').config();
 
 app.use(cors());
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https://intelliask-backend.onrender.com'],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+  })
+);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
