@@ -1,12 +1,12 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const app = express();
-require('dotenv').config();
 
 app.use(cors());
 app.use(
@@ -91,7 +91,7 @@ app.post('/ask', async (req, res) => {
     }
 
     const geminiApiKey = process.env.GEMINI_API_KEY;
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1:generateContent?key=${geminiApiKey}`;
 
     const response = await axios.post(geminiEndpoint, {
       contents: [
@@ -136,7 +136,8 @@ app.get('/question/:slug', async (req, res) => {
     }
 
     const geminiApiKey = process.env.GEMINI_API_KEY;
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+    console.log('g', geminiApiKey)
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
 
     const response = await axios.post(geminiEndpoint, {
       contents: [
