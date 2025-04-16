@@ -100,7 +100,7 @@ app.post('/ask', async (req, res) => {
       return res.status(500).json({ error: 'Chiave API Gemini mancante' });
     }
 
-    const geminiEndpoint = `hhttps://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
 
     const response = await axios.post(geminiEndpoint, {
       contents: [
