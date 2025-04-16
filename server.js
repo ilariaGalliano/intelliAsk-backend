@@ -136,7 +136,6 @@ app.get('/question/:slug', async (req, res) => {
     }
 
     const geminiApiKey = process.env.GEMINI_API_KEY;
-    console.log('g', geminiApiKey)
     const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
 
     const response = await axios.post(geminiEndpoint, {
