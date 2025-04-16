@@ -100,26 +100,20 @@ app.post('/ask', async (req, res) => {
       return res.json({ answer: cached, slug });
     }
 
-    const client = await auth.getClient();
-    const accessToken = await client.getAccessToken();
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    if (!geminiApiKey) {
+      return res.status(500).json({ error: 'Chiave API Gemini mancante' });
+    }
 
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent`;
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${geminiApiKey}`;
 
-    const response = await axios.post(
-      geminiEndpoint,
-      {
-        prompt: {
-          text: prompt
-        },
-        temperature: 0.7,
-        candidateCount: 1
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
+    const response = await axios.post(geminiEndpoint, {
+      contents: [
+        {
+          parts: [{ text: prompt }]
         }
-      }
-    );
+      ]
+    });
 
     const answer = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta disponibile.";
     saveAnswerToCache(slug, answer);
@@ -133,6 +127,7 @@ app.post('/ask', async (req, res) => {
     });
   }
 });
+
 
 app.get('/question/:slug', async (req, res) => {
   const slug = req.params.slug;
