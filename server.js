@@ -22,6 +22,8 @@ app.use(
   })
 );
 
+app.set('trust proxy', 1);
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -36,6 +38,7 @@ const PORT = 5000;
 const BASE_URL = 'http://localhost:' + PORT;
 const PROD_URL = 'https://intelliask.netlify.app';
 const QUESTIONS_FILE = path.join(__dirname, 'questions.json');
+
 function getAnswerFromCache(slug) {
   const file = path.join(__dirname, 'answers', slug + '.txt');
   if (fs.existsSync(file)) {
@@ -82,6 +85,8 @@ function saveQuestion(question) {
 
 app.post('/ask', async (req, res) => {
   const prompt = req.body.question;
+  if (!prompt) return res.status(400).json({ error: 'Domanda mancante' });
+
   const slug = saveQuestion(prompt);
 
   try {
@@ -91,7 +96,9 @@ app.post('/ask', async (req, res) => {
     }
 
     const geminiApiKey = process.env.GEMINI_API_KEY;
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1:generateContent?key=${geminiApiKey}`;
+    if (!geminiApiKey) return res.status(500).json({ error: 'Chiave API Gemini mancante' });
+
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
 
     const response = await axios.post(geminiEndpoint, {
       contents: [
@@ -110,7 +117,6 @@ app.post('/ask', async (req, res) => {
     res.status(500).json({ error: 'Errore da Gemini API', details: error.message });
   }
 });
-
 
 app.get('/question/:slug', async (req, res) => {
   const slug = req.params.slug;
