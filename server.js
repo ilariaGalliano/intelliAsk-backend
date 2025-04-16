@@ -7,6 +7,7 @@ const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const app = express();
+const { GoogleAuth } = require('google-auth-library');
 
 app.use(cors());
 app.use(
@@ -23,6 +24,10 @@ app.use(
 );
 
 app.set('trust proxy', 1);
+
+const auth = new GoogleAuth({
+  scopes: ['https://www.googleapis.com/auth/generative-language']
+});
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -95,18 +100,26 @@ app.post('/ask', async (req, res) => {
       return res.json({ answer: cached, slug });
     }
 
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) return res.status(500).json({ error: 'Chiave API Gemini mancante' });
+    const client = await auth.getClient();
+    const accessToken = await client.getAccessToken();
 
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent`;
 
-    const response = await axios.post(geminiEndpoint, {
-      contents: [
-        {
-          parts: [{ text: prompt }]
+    const response = await axios.post(
+      geminiEndpoint,
+      {
+        prompt: {
+          text: prompt
+        },
+        temperature: 0.7,
+        candidateCount: 1
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
         }
-      ]
-    });
+      }
+    );
 
     const answer = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta disponibile.";
     saveAnswerToCache(slug, answer);
@@ -114,7 +127,10 @@ app.post('/ask', async (req, res) => {
     res.json({ answer, slug });
   } catch (error) {
     console.error("Errore Gemini:", error.response?.data || error.message);
-    res.status(500).json({ error: 'Errore da Gemini API', details: error.message });
+    res.status(500).json({
+      error: 'Errore da Gemini API',
+      details: error.response?.data?.error?.message || error.message
+    });
   }
 });
 
