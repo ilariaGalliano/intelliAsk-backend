@@ -4,6 +4,7 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "update-sitemap": "node fetchSitemap.js",
     "start": "node server.js"
   },
   "author": "Ilaria Galliano",
