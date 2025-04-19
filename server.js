@@ -268,14 +268,26 @@ app.get('/question/:slug', async (req, res) => {
 
 app.get('/sitemap.xml', (req, res) => {
   const questions = getAllQuestions();
+
+  const escapeXml = str =>
+    str.replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
   const urls = questions.map(q => `
     <url>
-      <loc>${PROD_URL}/question/${q.slug}</loc>
+      <loc>${PROD_URL}/question/${escapeXml(q.slug)}</loc>
       <changefreq>weekly</changefreq>
+      <priority>0.8</priority>
     </url>`).join('');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
   <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+      <loc>${PROD_URL}/</loc>
+      <changefreq>daily</changefreq>
+      <priority>1.0</priority>
+    </url>
     ${urls}
   </urlset>`;
 
