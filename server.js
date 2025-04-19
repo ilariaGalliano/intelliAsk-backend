@@ -181,6 +181,9 @@ app.get('/question/:slug', async (req, res) => {
           <div class="container">
             <h1>${question}</h1>
             <p>${cached.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<li>$1</li>')}</p>
+             <p style="font-size:11px; margin-top: 20px; margin-bottom: 10px;">
+                Le risposte potrebbero essere scorrette e non aggiornate.
+             </p>
           </div>
         </body>
         </html>
