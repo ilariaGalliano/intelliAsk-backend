@@ -136,12 +136,52 @@ app.get('/question/:slug', async (req, res) => {
         <html lang="it">
         <head>
           <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>${question}</title>
           <meta name="description" content="${cached.slice(0, 150)}" />
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f9f9f9;
+              color: #333;
+            }
+            .container {
+              max-width: 800px;
+              margin: 50px auto;
+              padding: 20px;
+              background: #fff;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+              color: #0077cc;
+              font-size: 2rem;
+              margin-bottom: 20px;
+            }
+            p {
+              font-size: 1.2rem;
+              margin-bottom: 15px;
+            }
+            ul {
+              list-style-type: disc;
+              margin-left: 20px;
+            }
+            li {
+              margin-bottom: 10px;
+            }
+            strong {
+              color: #0077cc;
+            }
+          </style>
         </head>
         <body>
-          <h1>${question}</h1>
-          <p>${cached}</p>
+          <div class="container">
+            <h1>${question}</h1>
+            <p>${cached.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<li>$1</li>')}</p>
+          </div>
         </body>
         </html>
       `);
@@ -166,12 +206,52 @@ app.get('/question/:slug', async (req, res) => {
       <html lang="it">
       <head>
         <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>${question}</title>
         <meta name="description" content="${answer.slice(0, 150)}" />
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+          }
+          .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          h1 {
+            color: #0077cc;
+            font-size: 2rem;
+            margin-bottom: 20px;
+          }
+          p {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+          }
+          ul {
+            list-style-type: disc;
+            margin-left: 20px;
+          }
+          li {
+            margin-bottom: 10px;
+          }
+          strong {
+            color: #0077cc;
+          }
+        </style>
       </head>
       <body>
-        <h1>${question}</h1>
-        <p>${answer}</p>
+        <div class="container">
+          <h1>${question}</h1>
+          <p>${answer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<li>$1</li>')}</p>
+        </div>
       </body>
       </html>
     `;
