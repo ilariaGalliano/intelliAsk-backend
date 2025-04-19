@@ -2,11 +2,11 @@ const fs = require('fs');
 const path = require('path');
 
 const questionsFile = path.join(__dirname, 'questions.json');
-const outputPath = path.join(__dirname, '..', '..', 'intelliAsk-frontend', 'public', 'sitemap.xml');
+const outputPath = path.join(__dirname, '..', '..', 'intelliAsk-frontend', 'sitemap.xml');
 const baseUrl = 'https://intelliask.netlify.app';
 
 if (!fs.existsSync(questionsFile)) {
-  console.error("❌ Il file questions.json non esiste ancora.");
+  console.error("Il file questions.json non esiste ancora.");
   process.exit(1);
 }
 
@@ -33,4 +33,4 @@ if (!fs.existsSync(outputDir)) {
 }
 
 fs.writeFileSync(outputPath, xml);
-console.log('✅ Sitemap generata con successo in:', outputPath);
+console.log('Sitemap generata con successo in:', outputPath);
