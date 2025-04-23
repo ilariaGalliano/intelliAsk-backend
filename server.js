@@ -150,7 +150,8 @@ app.get('/question/:slug', async (req, res) => {
 
     let htmlAnswer = cached
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<li>$1</li>');
+      .replace(/\*(.*?)\*/g, '<li>$1</li>')
+      .replace(/\*/g, ''); 
 
     if (htmlAnswer.includes('<li>')) {
       htmlAnswer = `<ul>${htmlAnswer}</ul>`;
