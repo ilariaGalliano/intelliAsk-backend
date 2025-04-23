@@ -123,10 +123,35 @@ app.post('/ask', async (req, res) => {
   }
 });
 
-
 app.get('/question/:slug', async (req, res) => {
   const slug = req.params.slug;
   const question = slugToQuestion(slug);
+
+  // Funzione per formattare la risposta
+  function formatAnswerText(text) {
+    // Titoli in grassetto
+    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // Elenco semplice (ingredienti, varianti, consigli)
+    formatted = formatted.replace(
+      /(?:\n|^)\* (.*?)(?=\n\* |\n\n|$)/g,
+      (() => {
+        let count = 1;
+        return (_, item) => `<li><strong>${count++}.</strong> ${item.trim()}</li>`;
+      })()
+    );
+    formatted = formatted.replace(/(<li><strong>\d+\.<\/strong> .*?<\/li>)/gs, '<ul>$1</ul>');
+    formatted = formatted.replace(/<\/ul>\s*<ul>/g, '');
+
+    // Passaggi della preparazione
+    formatted = formatted.replace(/(?:\n|^)(\d+)\.\s\*\*(.*?)\*\*:(.*?)(?=\n\d+\.|\n\n|$)/gs,
+      (_, num, title, desc) => `<li><strong>${num}.</strong> <strong>${title}:</strong> ${desc.trim()}</li>`
+    );
+    formatted = formatted.replace(/(<li><strong>\d+\.<\/strong> <strong>.*?<\/strong>: .*?<\/li>)/gs, '<ol>$1</ol>');
+    formatted = formatted.replace(/<\/ol>\s*<ol>/g, '');
+
+    return formatted;
+  }
 
   try {
     let cached = getAnswerFromCache(slug);
@@ -165,9 +190,9 @@ app.get('/question/:slug', async (req, res) => {
               font-size: 1.2rem;
               margin-bottom: 15px;
             }
-            ul {
-              list-style-type: disc;
+            ul, ol {
               margin-left: 20px;
+              margin-bottom: 20px;
             }
             li {
               margin-bottom: 10px;
@@ -180,10 +205,10 @@ app.get('/question/:slug', async (req, res) => {
         <body>
           <div class="container">
             <h1>${question}</h1>
-            <p>${cached.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<li>$1</li>')}</p>
-             <p style="font-size:11px; margin-top: 20px; margin-bottom: 10px;">
-                *Le risposte potrebbero essere scorrette e/o non aggiornate.
-             </p>
+            <p>${formatAnswerText(cached)}</p>
+            <p style="font-size:11px; margin-top: 20px; margin-bottom: 10px;">
+              *Le risposte potrebbero essere scorrette e/o non aggiornate.
+            </p>
           </div>
         </body>
         </html>
@@ -194,17 +219,13 @@ app.get('/question/:slug', async (req, res) => {
     const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
 
     const response = await axios.post(geminiEndpoint, {
-      contents: [
-        {
-          parts: [{ text: question }]
-        }
-      ]
+      contents: [{ parts: [{ text: question }] }]
     });
 
     const answer = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta.";
     saveAnswerToCache(slug, answer);
 
-    const html = `
+    res.send(`
       <!DOCTYPE html>
       <html lang="it">
       <head>
@@ -238,9 +259,9 @@ app.get('/question/:slug', async (req, res) => {
             font-size: 1.2rem;
             margin-bottom: 15px;
           }
-          ul {
-            list-style-type: disc;
+          ul, ol {
             margin-left: 20px;
+            margin-bottom: 20px;
           }
           li {
             margin-bottom: 10px;
@@ -253,18 +274,17 @@ app.get('/question/:slug', async (req, res) => {
       <body>
         <div class="container">
           <h1>${question}</h1>
-          <p>${answer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<li>$1</li>')}</p>
+          <p>${formatAnswerText(answer)}</p>
         </div>
       </body>
       </html>
-    `;
-
-    res.send(html);
+    `);
   } catch (error) {
     console.error("Errore Gemini:", error.response?.data || error.message);
     res.status(500).send("Errore nella generazione della risposta.");
   }
 });
+
 
 app.get('/sitemap.xml', (req, res) => {
   const questions = getAllQuestions();
