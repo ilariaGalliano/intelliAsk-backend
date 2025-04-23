@@ -130,35 +130,79 @@ app.get('/question/:slug', async (req, res) => {
 
   try {
     let cached = getAnswerFromCache(slug);
-    if (!cached) {
-      const geminiApiKey = process.env.GEMINI_API_KEY;
-      const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
-
-      const response = await axios.post(geminiEndpoint, {
-        contents: [
-          {
-            parts: [{ text: question }]
-          }
-        ]
-      });
-
-      cached = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta.";
-      saveAnswerToCache(slug, cached);
+    if (cached) {
+      return res.send(`
+        <!DOCTYPE html>
+        <html lang="it">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>${question}</title>
+          <meta name="description" content="${cached.slice(0, 150)}" />
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f9f9f9;
+              color: #333;
+            }
+            .container {
+              max-width: 800px;
+              margin: 50px auto;
+              padding: 20px;
+              background: #fff;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+              color: #0077cc;
+              font-size: 2rem;
+              margin-bottom: 20px;
+            }
+            p {
+              font-size: 1.2rem;
+              margin-bottom: 15px;
+            }
+            ul {
+              list-style-type: disc;
+              margin-left: 20px;
+            }
+            li {
+              margin-bottom: 10px;
+            }
+            strong {
+              color: #0077cc;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>${question}</h1>
+            <p>${cached.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<li>$1</li>')}</p>
+             <p style="font-size:11px; margin-top: 20px; margin-bottom: 10px;">
+                *Le risposte potrebbero essere scorrette e/o non aggiornate.
+             </p>
+          </div>
+        </body>
+        </html>
+      `);
     }
 
-    let htmlAnswer = cached
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
-      .replace(/^\*\s+(.*)$/gm, '<li>$1</li>') 
-      .replace(/^(\d+)\.\s+(.*)$/gm, '<li><span style="color:#0078d7;">$1.</span> $2</li>'); 
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
 
-    if (htmlAnswer.includes('<li>')) {
-      htmlAnswer = `<ul>${htmlAnswer}</ul>`;
+    const response = await axios.post(geminiEndpoint, {
+      contents: [
+        {
+          parts: [{ text: question }]
+        }
+      ]
+    });
 
-      if (htmlAnswer.includes('<span style="color:#0078d7;">')) {
-        htmlAnswer = htmlAnswer.replace('<ul>', '<ol>').replace('</ul>', '</ol>');
-      }
-    }
-
+    const answer = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta.";
+    saveAnswerToCache(slug, answer);
 
     const html = `
       <!DOCTYPE html>
@@ -167,7 +211,7 @@ app.get('/question/:slug', async (req, res) => {
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>${question}</title>
-        <meta name="description" content="${cached.slice(0, 150)}" />
+        <meta name="description" content="${answer.slice(0, 150)}" />
         <style>
           body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -190,9 +234,13 @@ app.get('/question/:slug', async (req, res) => {
             font-size: 2rem;
             margin-bottom: 20px;
           }
-          p, ul {
+          p {
             font-size: 1.2rem;
             margin-bottom: 15px;
+          }
+          ul {
+            list-style-type: disc;
+            margin-left: 20px;
           }
           li {
             margin-bottom: 10px;
@@ -205,10 +253,7 @@ app.get('/question/:slug', async (req, res) => {
       <body>
         <div class="container">
           <h1>${question}</h1>
-          <p>${htmlAnswer}</p>
-          <p style="font-size:11px; margin-top: 20px; margin-bottom: 10px;">
-            *Le risposte potrebbero essere scorrette e/o non aggiornate.
-          </p>
+          <p>${answer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<li>$1</li>')}</p>
         </div>
       </body>
       </html>
@@ -220,7 +265,6 @@ app.get('/question/:slug', async (req, res) => {
     res.status(500).send("Errore nella generazione della risposta.");
   }
 });
-
 
 app.get('/sitemap.xml', (req, res) => {
   const questions = getAllQuestions();
