@@ -89,6 +89,29 @@ app.post('/ask', async (req, res) => {
 
   const slug = saveQuestion(prompt);
 
+  // Funzione per formattare la risposta
+  function formatAnswerText(text) {
+    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    formatted = formatted.replace(
+      /(?:\n|^)\* (.*?)(?=\n\* |\n\n|$)/g,
+      (() => {
+        let count = 1;
+        return (_, item) => `<li><strong>${count++}.</strong> ${item.trim()}</li>`;
+      })()
+    );
+    formatted = formatted.replace(/(<li><strong>\d+\.<\/strong> .*?<\/li>)/gs, '<ul>$1</ul>');
+    formatted = formatted.replace(/<\/ul>\s*<ul>/g, '');
+
+    formatted = formatted.replace(/(?:\n|^)(\d+)\.\s\*\*(.*?)\*\*:(.*?)(?=\n\d+\.|\n\n|$)/gs,
+      (_, num, title, desc) => `<li><strong>${num}.</strong> <strong>${title}:</strong> ${desc.trim()}</li>`
+    );
+    formatted = formatted.replace(/(<li><strong>\d+\.<\/strong> <strong>.*?<\/strong>: .*?<\/li>)/gs, '<ol>$1</ol>');
+    formatted = formatted.replace(/<\/ol>\s*<ol>/g, '');
+
+    return formatted;
+  }
+
   try {
     let cached = getAnswerFromCache(slug);
     if (cached) {
@@ -110,10 +133,12 @@ app.post('/ask', async (req, res) => {
       ]
     });
 
-    const answer = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta disponibile.";
-    saveAnswerToCache(slug, answer);
+    const rawAnswer = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta disponibile.";
+    const formattedAnswer = formatAnswerText(rawAnswer);
 
-    res.json({ answer, slug });
+    saveAnswerToCache(slug, formattedAnswer);
+
+    res.json({ answer: formattedAnswer, slug });
   } catch (error) {
     console.error("Errore Gemini:", error.response?.data || error.message);
     res.status(500).json({
@@ -123,16 +148,15 @@ app.post('/ask', async (req, res) => {
   }
 });
 
+
 app.get('/question/:slug', async (req, res) => {
   const slug = req.params.slug;
   const question = slugToQuestion(slug);
 
   // Funzione per formattare la risposta
   function formatAnswerText(text) {
-    // Titoli in grassetto
     let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-    // Elenco semplice (ingredienti, varianti, consigli)
     formatted = formatted.replace(
       /(?:\n|^)\* (.*?)(?=\n\* |\n\n|$)/g,
       (() => {
@@ -143,7 +167,6 @@ app.get('/question/:slug', async (req, res) => {
     formatted = formatted.replace(/(<li><strong>\d+\.<\/strong> .*?<\/li>)/gs, '<ul>$1</ul>');
     formatted = formatted.replace(/<\/ul>\s*<ul>/g, '');
 
-    // Passaggi della preparazione
     formatted = formatted.replace(/(?:\n|^)(\d+)\.\s\*\*(.*?)\*\*:(.*?)(?=\n\d+\.|\n\n|$)/gs,
       (_, num, title, desc) => `<li><strong>${num}.</strong> <strong>${title}:</strong> ${desc.trim()}</li>`
     );
