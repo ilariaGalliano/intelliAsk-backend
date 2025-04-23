@@ -84,7 +84,7 @@ function saveQuestion(question) {
 }
 
 app.post('/ask', async (req, res) => {
-  const prompt = req.body.question.trim().slice(0, 500);
+  const prompt = req.body.question.trim().slice(0, 200);
   if (!prompt) return res.status(400).json({ error: 'Domanda mancante' });
 
   const slug = saveQuestion(prompt);
