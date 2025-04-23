@@ -148,12 +148,21 @@ app.get('/question/:slug', async (req, res) => {
 
     // 🔧 FORMATTAZIONE RISPOSTA
     let htmlAnswer = cached
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Grassetto
-      .replace(/\*(.*?)\*/g, '<li>$1</li>'); // Lista
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<li>$1</li>');
 
-    if (htmlAnswer.includes('<li>')) {
-      htmlAnswer = `<ul>${htmlAnswer}</ul>`; // Wrappa <li> in <ul>
+    if (/(\d+)\.\s/.test(htmlAnswer)) {
+      htmlAnswer = htmlAnswer
+        .split(/(?=\d+\.\s)/g)
+        .map(p => p.trim().replace(/^\d+\.\s/, ''))
+        .map(p => `<li>${p}</li>`)
+        .join('');
+      htmlAnswer = `<ol>${htmlAnswer}</ol>`;
+    } else if (htmlAnswer.includes('<li>')) {
+      htmlAnswer = `<ul>${htmlAnswer}</ul>`;
     }
+
+
 
     // ✅ HTML GENERATO
     const html = `
