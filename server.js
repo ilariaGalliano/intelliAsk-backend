@@ -148,11 +148,17 @@ app.get('/question/:slug', async (req, res) => {
 
     let htmlAnswer = cached
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
-      .replace(/^\*\s+(.*)$/gm, '<li>$1</li>'); 
+      .replace(/^\*\s+(.*)$/gm, '<li>$1</li>') 
+      .replace(/^(\d+)\.\s+(.*)$/gm, '<li><span style="color:#0078d7;">$1.</span> $2</li>'); 
 
     if (htmlAnswer.includes('<li>')) {
       htmlAnswer = `<ul>${htmlAnswer}</ul>`;
+
+      if (htmlAnswer.includes('<span style="color:#0078d7;">')) {
+        htmlAnswer = htmlAnswer.replace('<ul>', '<ol>').replace('</ul>', '</ol>');
+      }
     }
+
 
     const html = `
       <!DOCTYPE html>
