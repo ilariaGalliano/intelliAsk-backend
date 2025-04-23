@@ -125,6 +125,32 @@ app.post('/ask', async (req, res) => {
   }
 });
 
+function formatAnswerText(rawAnswer) {
+  if (!rawAnswer) return "";
+
+  const lines = rawAnswer.split('\n');
+
+  const processedLines = lines.map(line => {
+    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    if (/^\s*\*\s+/.test(line)) {
+      const content = line.replace(/^\s*\*\s+/, '');
+      return `<li>${content}</li>`;
+    }
+
+    return line;
+  });
+
+  const hasListItems = processedLines.some(line => line.startsWith('<li>'));
+
+  const html = hasListItems
+    ? processedLines.map(line => line.startsWith('<li>') ? line : `<p>${line}</p>`).join('')
+    : processedLines.map(line => `<p>${line}</p>`).join('');
+
+  return hasListItems
+    ? `<ul>${html}</ul>`
+    : html;
+}
 
 app.get('/question/:slug', async (req, res) => {
   const slug = req.params.slug;
@@ -148,14 +174,7 @@ app.get('/question/:slug', async (req, res) => {
       saveAnswerToCache(slug, cached);
     }
 
-    let htmlAnswer = cached
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<li>$1</li>')
-      .replace(/\*/g, ''); 
-
-    if (htmlAnswer.includes('<li>')) {
-      htmlAnswer = `<ul>${htmlAnswer}</ul>`;
-    }
+    const htmlAnswer = formatAnswerText(cached);
 
     const html = `
       <!DOCTYPE html>
