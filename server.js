@@ -73,44 +73,11 @@ function getAllQuestions() {
   return JSON.parse(fs.readFileSync(QUESTIONS_FILE, 'utf8'));
 }
 
-function saveQuestion(question) {
-  const slug = questionToSlug(question);
-  const questions = getAllQuestions();
-  if (!questions.find(q => q.slug === slug)) {
-    questions.push({ question, slug });
-    fs.writeFileSync(QUESTIONS_FILE, JSON.stringify(questions, null, 2));
-  }
-  return slug;
-}
-
 app.post('/ask', async (req, res) => {
-  const prompt = req.body.question.trim().slice(0, 200);
+  const prompt = req.body.question.trim().slice(0, 500);
   if (!prompt) return res.status(400).json({ error: 'Domanda mancante' });
 
   const slug = saveQuestion(prompt);
-
-  // Funzione per formattare la risposta
-  function formatAnswerText(text) {
-    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-    formatted = formatted.replace(
-      /(?:\n|^)\* (.*?)(?=\n\* |\n\n|$)/g,
-      (() => {
-        let count = 1;
-        return (_, item) => `<li><strong>${count++}.</strong> ${item.trim()}</li>`;
-      })()
-    );
-    formatted = formatted.replace(/(<li><strong>\d+\.<\/strong> .*?<\/li>)/gs, '<ul>$1</ul>');
-    formatted = formatted.replace(/<\/ul>\s*<ul>/g, '');
-
-    formatted = formatted.replace(/(?:\n|^)(\d+)\.\s\*\*(.*?)\*\*:(.*?)(?=\n\d+\.|\n\n|$)/gs,
-      (_, num, title, desc) => `<li><strong>${num}.</strong> <strong>${title}:</strong> ${desc.trim()}</li>`
-    );
-    formatted = formatted.replace(/(<li><strong>\d+\.<\/strong> <strong>.*?<\/strong>: .*?<\/li>)/gs, '<ol>$1</ol>');
-    formatted = formatted.replace(/<\/ol>\s*<ol>/g, '');
-
-    return formatted;
-  }
 
   try {
     let cached = getAnswerFromCache(slug);
@@ -133,12 +100,10 @@ app.post('/ask', async (req, res) => {
       ]
     });
 
-    const rawAnswer = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta disponibile.";
-    const formattedAnswer = formatAnswerText(rawAnswer);
+    const answer = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta disponibile.";
+    saveAnswerToCache(slug, answer);
 
-    saveAnswerToCache(slug, formattedAnswer);
-
-    res.json({ answer: formattedAnswer, slug });
+    res.json({ answer, slug });
   } catch (error) {
     console.error("Errore Gemini:", error.response?.data || error.message);
     res.status(500).json({
@@ -153,109 +118,40 @@ app.get('/question/:slug', async (req, res) => {
   const slug = req.params.slug;
   const question = slugToQuestion(slug);
 
-  // Funzione per formattare la risposta
-  function formatAnswerText(text) {
-    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-    formatted = formatted.replace(
-      /(?:\n|^)\* (.*?)(?=\n\* |\n\n|$)/g,
-      (() => {
-        let count = 1;
-        return (_, item) => `<li><strong>${count++}.</strong> ${item.trim()}</li>`;
-      })()
-    );
-    formatted = formatted.replace(/(<li><strong>\d+\.<\/strong> .*?<\/li>)/gs, '<ul>$1</ul>');
-    formatted = formatted.replace(/<\/ul>\s*<ul>/g, '');
-
-    formatted = formatted.replace(/(?:\n|^)(\d+)\.\s\*\*(.*?)\*\*:(.*?)(?=\n\d+\.|\n\n|$)/gs,
-      (_, num, title, desc) => `<li><strong>${num}.</strong> <strong>${title}:</strong> ${desc.trim()}</li>`
-    );
-    formatted = formatted.replace(/(<li><strong>\d+\.<\/strong> <strong>.*?<\/strong>: .*?<\/li>)/gs, '<ol>$1</ol>');
-    formatted = formatted.replace(/<\/ol>\s*<ol>/g, '');
-
-    return formatted;
-  }
-
   try {
     let cached = getAnswerFromCache(slug);
-    if (cached) {
-      return res.send(`
-        <!DOCTYPE html>
-        <html lang="it">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>${question}</title>
-          <meta name="description" content="${cached.slice(0, 150)}" />
-          <style>
-            body {
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              line-height: 1.6;
-              margin: 0;
-              padding: 0;
-              background-color: #f9f9f9;
-              color: #333;
-            }
-            .container {
-              max-width: 800px;
-              margin: 50px auto;
-              padding: 20px;
-              background: #fff;
-              border-radius: 8px;
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            }
-            h1 {
-              color: #0077cc;
-              font-size: 2rem;
-              margin-bottom: 20px;
-            }
-            p {
-              font-size: 1.2rem;
-              margin-bottom: 15px;
-            }
-            ul, ol {
-              margin-left: 20px;
-              margin-bottom: 20px;
-            }
-            li {
-              margin-bottom: 10px;
-            }
-            strong {
-              color: #0077cc;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>${question}</h1>
-            <p>${formatAnswerText(cached)}</p>
-            <p style="font-size:11px; margin-top: 20px; margin-bottom: 10px;">
-              *Le risposte potrebbero essere scorrette e/o non aggiornate.
-            </p>
-          </div>
-        </body>
-        </html>
-      `);
+    if (!cached) {
+      const geminiApiKey = process.env.GEMINI_API_KEY;
+      const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+
+      const response = await axios.post(geminiEndpoint, {
+        contents: [
+          {
+            parts: [{ text: question }]
+          }
+        ]
+      });
+
+      cached = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta.";
+      saveAnswerToCache(slug, cached);
     }
 
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+    let htmlAnswer = cached
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+      .replace(/\*(.*?)\*/g, '<li>$1</li>'); 
 
-    const response = await axios.post(geminiEndpoint, {
-      contents: [{ parts: [{ text: question }] }]
-    });
+    if (htmlAnswer.includes('<li>')) {
+      htmlAnswer = `<ul>${htmlAnswer}</ul>`; 
+    }
 
-    const answer = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Nessuna risposta.";
-    saveAnswerToCache(slug, answer);
-
-    res.send(`
+    const html = `
       <!DOCTYPE html>
       <html lang="it">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>${question}</title>
-        <meta name="description" content="${answer.slice(0, 150)}" />
+        <meta name="description" content="${cached.slice(0, 150)}" />
         <style>
           body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -278,13 +174,9 @@ app.get('/question/:slug', async (req, res) => {
             font-size: 2rem;
             margin-bottom: 20px;
           }
-          p {
+          p, ul {
             font-size: 1.2rem;
             margin-bottom: 15px;
-          }
-          ul, ol {
-            margin-left: 20px;
-            margin-bottom: 20px;
           }
           li {
             margin-bottom: 10px;
@@ -297,17 +189,21 @@ app.get('/question/:slug', async (req, res) => {
       <body>
         <div class="container">
           <h1>${question}</h1>
-          <p>${formatAnswerText(answer)}</p>
+          <p>${htmlAnswer}</p>
+          <p style="font-size:11px; margin-top: 20px; margin-bottom: 10px;">
+            *Le risposte potrebbero essere scorrette e/o non aggiornate.
+          </p>
         </div>
       </body>
       </html>
-    `);
+    `;
+
+    res.send(html);
   } catch (error) {
     console.error("Errore Gemini:", error.response?.data || error.message);
     res.status(500).send("Errore nella generazione della risposta.");
   }
 });
-
 
 app.get('/sitemap.xml', (req, res) => {
   const questions = getAllQuestions();
