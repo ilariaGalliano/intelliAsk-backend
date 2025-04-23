@@ -58,7 +58,7 @@ function saveAnswerToCache(slug, answer) {
 
 function questionToSlug(question) {
   return question
-    .toUpperCase()
+    .toLowerCase()
     .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '-')
     .trim();
@@ -146,25 +146,14 @@ app.get('/question/:slug', async (req, res) => {
       saveAnswerToCache(slug, cached);
     }
 
-    // 🔧 FORMATTAZIONE RISPOSTA
     let htmlAnswer = cached
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<li>$1</li>');
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+      .replace(/^\*\s+(.*)$/gm, '<li>$1</li>'); 
 
-    if (/(\d+)\.\s/.test(htmlAnswer)) {
-      htmlAnswer = htmlAnswer
-        .split(/(?=\d+\.\s)/g)
-        .map(p => p.trim().replace(/^\d+\.\s/, ''))
-        .map(p => `<li>${p}</li>`)
-        .join('');
-      htmlAnswer = `<ol>${htmlAnswer}</ol>`;
-    } else if (htmlAnswer.includes('<li>')) {
+    if (htmlAnswer.includes('<li>')) {
       htmlAnswer = `<ul>${htmlAnswer}</ul>`;
     }
 
-
-
-    // ✅ HTML GENERATO
     const html = `
       <!DOCTYPE html>
       <html lang="it">
