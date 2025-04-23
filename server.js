@@ -64,6 +64,18 @@ function questionToSlug(question) {
     .trim();
 }
 
+function saveQuestion(question) {
+  const slug = questionToSlug(question);
+
+  const questions = getAllQuestions();
+
+  if (!questions.find(q => q.slug === slug)) {
+    questions.push({ question, slug });
+    fs.writeFileSync(QUESTIONS_FILE, JSON.stringify(questions, null, 2));
+  }
+  return slug;
+}
+
 function slugToQuestion(slug) {
   return decodeURIComponent(slug.replace(/-/g, ' '));
 }
@@ -137,11 +149,11 @@ app.get('/question/:slug', async (req, res) => {
     }
 
     let htmlAnswer = cached
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
-      .replace(/\*(.*?)\*/g, '<li>$1</li>'); 
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<li>$1</li>');
 
     if (htmlAnswer.includes('<li>')) {
-      htmlAnswer = `<ul>${htmlAnswer}</ul>`; 
+      htmlAnswer = `<ul>${htmlAnswer}</ul>`;
     }
 
     const html = `
