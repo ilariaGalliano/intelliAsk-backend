@@ -57,8 +57,7 @@ function saveAnswerToCache(slug, answer) {
 }
 
 function questionToSlug(question) {
-  return question
-    .toLowerCase()
+  return toCamelCase(question)
     .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '-')
     .trim();
@@ -66,6 +65,12 @@ function questionToSlug(question) {
 
 function slugToQuestion(slug) {
   return decodeURIComponent(slug.replace(/-/g, ' '));
+}
+
+function toCamelCase(str) {
+  return str
+    .toLowerCase()
+    .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase());
 }
 
 function getAllQuestions() {
@@ -182,7 +187,7 @@ app.get('/question/:slug', async (req, res) => {
             <h1>${question}</h1>
             <p>${cached.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<li>$1</li>')}</p>
              <p style="font-size:11px; margin-top: 20px; margin-bottom: 10px;">
-                Le risposte potrebbero essere scorrette e non aggiornate.
+                *Le risposte potrebbero essere scorrette e/o non aggiornate.
              </p>
           </div>
         </body>
